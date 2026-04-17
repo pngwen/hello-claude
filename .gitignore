@@ -34,6 +34,7 @@
 
 # Executables
 hello
+test
 *.exe
 *.out
 *.app
