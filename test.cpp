@@ -1,3 +1,16 @@
+/**
+ * @file test.cpp
+ * @brief Unit tests for figlet() and ofigstream.
+ *
+ * All tests capture output into std::ostringstream instances so results can
+ * be verified as plain strings without depending on terminal rendering.
+ * Pass/fail banners are themselves printed through ofigstream, so the test
+ * runner is also a live demonstration of the library.
+ *
+ * @author Robert Lowe
+ * @author Claude (Anthropic)
+ * @copyright MIT License, Copyright (c) 2026 Robert Lowe
+ */
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -9,6 +22,15 @@
 static constexpr int HEIGHT = 5;
 static int g_passed = 0, g_failed = 0;
 
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Split @p s into a vector of lines, one entry per newline-delimited row.
+ * @param s  The string to split.
+ * @return   Vector of lines (trailing newline is consumed, not stored).
+ */
 static std::vector<std::string> split_lines(const std::string& s)
 {
     std::vector<std::string> v;
@@ -19,17 +41,35 @@ static std::vector<std::string> split_lines(const std::string& s)
     return v;
 }
 
+/**
+ * @brief Count the number of newline characters in @p s.
+ * @param s  The string to inspect.
+ * @return   Number of '\\n' characters.
+ */
 static int count_newlines(const std::string& s)
 {
     return (int)std::count(s.begin(), s.end(), '\n');
 }
 
+/**
+ * @brief Print a section heading as plain text through ofigstream.
+ * @param name  The heading text.
+ */
 static void section(const std::string& name)
 {
     ofigstream out(std::cout);
     out << nofig << name << "\n";
 }
 
+/**
+ * @brief Record a test result and print a PASS or FAIL banner.
+ *
+ * The banner word (PASS/FAIL) is rendered in figlet; the test name appears
+ * as plain text at the default bottom alignment alongside it.
+ *
+ * @param name  Human-readable description of the test.
+ * @param ok    True if the test passed.
+ */
 static void test(const std::string& name, bool ok)
 {
     ofigstream out(std::cout);
@@ -42,8 +82,14 @@ static void test(const std::string& name, bool ok)
     }
 }
 
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+
+/// @brief Run all tests and print a summary.
 int main()
 {
+    // Print the suite header.
     {
         ofigstream hdr(std::cout);
         hdr << "ofigstream\n";
@@ -62,6 +108,7 @@ int main()
              count_newlines(figlet("")) == HEIGHT);
     }
     {
+        // Build a string containing every printable ASCII character.
         std::string all;
         for (int c = 32; c <= 126; ++c) all += static_cast<char>(c);
         test("figlet() handles all printable ASCII",
@@ -190,6 +237,7 @@ int main()
     }
 
     // -----------------------------------------------------------------------
+    // Print the final pass/fail tally as plain text.
     {
         ofigstream sum(std::cout);
         std::string s = std::to_string(g_passed) + " passed, " +

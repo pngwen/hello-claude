@@ -1,9 +1,17 @@
+/**
+ * @file figlet.cpp
+ * @brief Implementation of the figlet block-character banner renderer.
+ *
+ * @author Robert Lowe
+ * @author Claude (Anthropic)
+ * @copyright MIT License, Copyright (c) 2026 Robert Lowe
+ */
 #include "figlet.h"
 #include <sstream>
 
 static constexpr int HEIGHT = 5;
 
-// Indexed by (ch - 32) for printable ASCII 32–126.
+// Glyph table indexed by (ch - 32) for printable ASCII 32–126.
 // Every row string within a glyph has the same length; glyphs may differ in width.
 static const char* const FONT[95][HEIGHT] = {
     /* 32 SP */ {"   ","   ","   ","   ","   "},
@@ -103,19 +111,23 @@ static const char* const FONT[95][HEIGHT] = {
     /* 126 ~ */ {"     "," ##  ","#  ##","     ","     "},
 };
 
+/// @brief Render @p text as a five-row block-character banner.
 std::string figlet(const std::string& text)
 {
     std::ostringstream oss;
+
+    // Emit one horizontal slice of the full banner per row.
     for (int row = 0; row < HEIGHT; ++row) {
+
+        // Append each character's glyph row, separated by a single space.
         for (size_t i = 0; i < text.size(); ++i) {
             if (i > 0) oss << ' ';
             unsigned char ch = static_cast<unsigned char>(text[i]);
-            if (ch >= 32 && ch <= 126)
-                oss << FONT[ch - 32][row];
-            else
-                oss << "   ";
+            oss << (ch >= 32 && ch <= 126 ? FONT[ch - 32][row] : "   ");
         }
+
         oss << '\n';
     }
+
     return oss.str();
 }
