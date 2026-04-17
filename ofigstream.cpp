@@ -131,7 +131,15 @@ int figbuf::overflow(int c)
     case '\x02': ensure_segment(false); break;
     case '\n':   flush_line(); line_.clear(); break;
     default:
-        if (line_.empty()) line_.push_back({"", false, cur_fg_, cur_bold_, cur_rainbow_});
+        if (line_.empty()) {
+            line_.push_back({"", false, cur_fg_, cur_bold_, cur_rainbow_});
+        } else {
+            // If the color state changed, open a new segment of the same
+            // plain/figlet type rather than switching types underneath nofig.
+            auto& back = line_.back();
+            if (back.fg != cur_fg_ || back.bold != cur_bold_ || back.rainbow != cur_rainbow_)
+                line_.push_back({"", back.plain, cur_fg_, cur_bold_, cur_rainbow_});
+        }
         line_.back().text += static_cast<char>(c);
     }
 
