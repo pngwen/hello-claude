@@ -24,7 +24,7 @@ int figbuf::overflow(int c)
     case '\x02': ensure_segment(false); break;
     case '\n':   flush_line(); line_.clear(); break;
     default:
-        ensure_segment(false);
+        if (line_.empty()) line_.push_back({"", false});
         line_.back().text += static_cast<char>(c);
     }
     return c;
