@@ -1,0 +1,314 @@
+/**
+ * @file test.cpp
+ * @brief Unit tests for figlet(), ofigstream, and color manipulators.
+ *
+ * All tests capture output into std::ostringstream instances so results can
+ * be verified as plain strings without depending on terminal rendering.
+ * Pass/fail banners are themselves printed through ofigstream, so the test
+ * runner is also a live demonstration of the library.
+ *
+ * @author Robert Lowe
+ * @author Claude (Anthropic)
+ * @copyright MIT License, Copyright (c) 2026 Robert Lowe
+ */
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include "figlet.h"
+#include "ofigstream.h"
+
+static int g_passed = 0, g_failed = 0;
+
+// ---------------------------------------------------------------------------
+// Test helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Split @p s into a vector of lines, one entry per newline-delimited row.
+ * @param s  The string to split.
+ * @return   Vector of lines (trailing newline is consumed, not stored).
+ */
+static std::vector<std::string> split_lines(const std::string& s)
+{
+    std::vector<std::string> v;
+    std::istringstream ss(s);
+    std::string line;
+    while (std::getline(ss, line))
+        v.push_back(line);
+    return v;
+}
+
+/**
+ * @brief Count the number of newline characters in @p s.
+ * @param s  The string to inspect.
+ * @return   Number of '\\n' characters.
+ */
+static int count_newlines(const std::string& s)
+{
+    return (int)std::count(s.begin(), s.end(), '\n');
+}
+
+/**
+ * @brief Print a section heading as plain text through ofigstream.
+ * @param name  The heading text.
+ */
+static void section(const std::string& name)
+{
+    ofigstream out(std::cout);
+    out << nofig << name << "\n";
+}
+
+/**
+ * @brief Record a test result and print a PASS or FAIL banner.
+ *
+ * The banner word (PASS/FAIL) is rendered in figlet; the test name appears
+ * as plain text at the default bottom alignment alongside it.
+ *
+ * @param name  Human-readable description of the test.
+ * @param ok    True if the test passed.
+ */
+static void test(const std::string& name, bool ok)
+{
+    ofigstream out(std::cout);
+    if (ok) {
+        out << fig::bright_green << "PASS" << fig::nocolor << nofig << (" " + name) << "\n";
+        ++g_passed;
+    } else {
+        out << fig::bright_red << "FAIL" << fig::nocolor << nofig << (" " + name) << "\n";
+        ++g_failed;
+    }
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
+
+/// @brief Run all tests and print a summary.
+int main()
+{
+    // Print the suite header.
+    {
+        ofigstream hdr(std::cout);
+        hdr << fig::rainbow << "ofigstream\n";
+        hdr << nofig << "unit test suite" << "\n";
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ figlet() ]");
+
+    {
+        test("figlet() produces 5 rows for one char",
+             count_newlines(figlet("A")) == FIGLET_HEIGHT);
+    }
+    {
+        test("figlet() produces 5 rows for empty string",
+             count_newlines(figlet("")) == FIGLET_HEIGHT);
+    }
+    {
+        // Build a string containing every printable ASCII character.
+        std::string all;
+        for (int c = 32; c <= 126; ++c) all += static_cast<char>(c);
+        test("figlet() handles all printable ASCII",
+             count_newlines(figlet(all)) == FIGLET_HEIGHT);
+    }
+    {
+        // figlet_char should return consistent row count.
+        auto rows = figlet_char('A');
+        test("figlet_char() returns 5 rows",
+             (int)rows.size() == FIGLET_HEIGHT);
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ ofigstream basic ]");
+
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "A\n";
+        test("single char produces 5 rows",
+             count_newlines(ss.str()) == FIGLET_HEIGHT);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "Hello\n";
+        test("multi-char string produces 5 rows",
+             count_newlines(ss.str()) == FIGLET_HEIGHT);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "A\n";
+        s << "B\n";
+        test("two figlet lines produce 10 rows",
+             count_newlines(ss.str()) == 2 * FIGLET_HEIGHT);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "\n";
+        test("bare newline produces a single blank line",
+             ss.str() == "\n");
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ nofig alignment ]");
+
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "X" << nofig << "MARKER" << "X\n";
+        auto rows = split_lines(ss.str());
+        test("default alignment is bottom",
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT - 1].find("MARKER") != std::string::npos &&
+             rows[0].find("MARKER") == std::string::npos);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << top << "X" << nofig << "MARKER" << "X\n";
+        auto rows = split_lines(ss.str());
+        test("top puts plain text on row 0",
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[0].find("MARKER") != std::string::npos &&
+             rows[FIGLET_HEIGHT - 1].find("MARKER") == std::string::npos);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << middle << "X" << nofig << "MARKER" << "X\n";
+        auto rows = split_lines(ss.str());
+        test("middle puts plain text on row 2",
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT / 2].find("MARKER") != std::string::npos &&
+             rows[0].find("MARKER") == std::string::npos);
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ alignment persistence ]");
+
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << top;
+        s << "X" << nofig << "FIRST" << "X\n";
+        s << "X" << nofig << "SECOND" << "X\n";
+        auto rows = split_lines(ss.str());
+        test("top alignment persists across two lines",
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
+             rows[0].find("FIRST") != std::string::npos &&
+             rows[FIGLET_HEIGHT].find("SECOND") != std::string::npos);
+    }
+    {
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << middle;
+        s << "X" << nofig << "FIRST" << "X\n";
+        s << "X" << nofig << "SECOND" << "X\n";
+        auto rows = split_lines(ss.str());
+        test("middle alignment persists across two lines",
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT / 2].find("FIRST") != std::string::npos &&
+             rows[FIGLET_HEIGHT + FIGLET_HEIGHT / 2].find("SECOND") != std::string::npos);
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ nofig one-shot ]");
+
+    {
+        // "skip" is plain (nofig); "A" should revert to figlet.
+        // With bottom alignment, row 0 of the plain segment is blank.
+        // If "A" is figlet its glyph has '#' on row 0.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << bottom << nofig << "skip" << "A\n";
+        auto rows = split_lines(ss.str());
+        test("one-shot: field after nofig reverts to figlet",
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[0].find('#') != std::string::npos);
+    }
+    {
+        // Two consecutive nofigs make two plain fields; no figlet '#' on row 0.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << bottom << nofig << "skip" << nofig << "A\n";
+        auto rows = split_lines(ss.str());
+        test("two nofigs make two consecutive plain fields",
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[0].find('#') == std::string::npos);
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ color manipulators ]");
+
+    {
+        // A solid color should embed ANSI escape codes in the output.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::red << "A\n";
+        test("solid color embeds ANSI codes",
+             ss.str().find("\033[") != std::string::npos);
+    }
+    {
+        // Without any color manipulator the output should be plain text.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "A\n";
+        test("no color manipulator means no ANSI codes",
+             ss.str().find("\033[") == std::string::npos);
+    }
+    {
+        // nocolor after a color should produce clean output on subsequent lines.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::red << "A\n";
+        s << fig::nocolor << "B\n";
+        auto rows = split_lines(ss.str());
+
+        // The second band (rows FIGLET_HEIGHT..2*FIGLET_HEIGHT-1) should be clean.
+        bool second_clean = true;
+        for (int r = FIGLET_HEIGHT; r < 2 * FIGLET_HEIGHT; ++r)
+            if (rows[r].find("\033[") != std::string::npos)
+                second_clean = false;
+
+        test("nocolor clears ANSI codes for subsequent output", second_clean);
+    }
+    {
+        // Color persists: both lines should contain escape codes.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::blue;
+        s << "A\n";
+        s << "B\n";
+        auto rows = split_lines(ss.str());
+        test("color persists across lines",
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
+             rows[0].find("\033[") != std::string::npos &&
+             rows[FIGLET_HEIGHT].find("\033[") != std::string::npos);
+    }
+    {
+        // Rainbow should produce at least two distinct color codes.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::rainbow << "ABC\n";
+        std::string out = ss.str();
+        bool has_bright_red    = out.find("\033[91m") != std::string::npos;
+        bool has_bright_yellow = out.find("\033[93m") != std::string::npos;
+        test("rainbow cycles through multiple palette colors",
+             has_bright_red && has_bright_yellow);
+    }
+
+    // -----------------------------------------------------------------------
+    // Print the final pass/fail tally as plain text.
+    {
+        ofigstream sum(std::cout);
+        std::string s = std::to_string(g_passed) + " passed, " +
+                        std::to_string(g_failed) + " failed";
+        sum << nofig << s << "\n";
+    }
+
+    return g_failed > 0 ? 1 : 0;
+}
