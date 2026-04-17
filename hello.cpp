@@ -1,8 +1,9 @@
 #include <iostream>
-#include "figlet.h"
+#include "ofigstream.h"
 
 int main()
 {
-    std::cout << figlet("Hello, World!");
+    ofigstream out(std::cout);
+    out << "Hello" << nofig << ", " << "World!\n";
     return 0;
 }
