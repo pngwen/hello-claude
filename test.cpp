@@ -1,6 +1,6 @@
 /**
  * @file test.cpp
- * @brief Unit tests for figlet() and ofigstream.
+ * @brief Unit tests for figlet(), ofigstream, and color manipulators.
  *
  * All tests capture output into std::ostringstream instances so results can
  * be verified as plain strings without depending on terminal rendering.
@@ -19,7 +19,6 @@
 #include "figlet.h"
 #include "ofigstream.h"
 
-static constexpr int HEIGHT = 5;
 static int g_passed = 0, g_failed = 0;
 
 // ---------------------------------------------------------------------------
@@ -74,10 +73,10 @@ static void test(const std::string& name, bool ok)
 {
     ofigstream out(std::cout);
     if (ok) {
-        out << "PASS" << nofig << (" " + name) << "\n";
+        out << fig::bright_green << "PASS" << fig::nocolor << nofig << (" " + name) << "\n";
         ++g_passed;
     } else {
-        out << "FAIL" << nofig << (" " + name) << "\n";
+        out << fig::bright_red << "FAIL" << fig::nocolor << nofig << (" " + name) << "\n";
         ++g_failed;
     }
 }
@@ -92,7 +91,7 @@ int main()
     // Print the suite header.
     {
         ofigstream hdr(std::cout);
-        hdr << "ofigstream\n";
+        hdr << fig::rainbow << "ofigstream\n";
         hdr << nofig << "unit test suite" << "\n";
     }
 
@@ -101,18 +100,24 @@ int main()
 
     {
         test("figlet() produces 5 rows for one char",
-             count_newlines(figlet("A")) == HEIGHT);
+             count_newlines(figlet("A")) == FIGLET_HEIGHT);
     }
     {
         test("figlet() produces 5 rows for empty string",
-             count_newlines(figlet("")) == HEIGHT);
+             count_newlines(figlet("")) == FIGLET_HEIGHT);
     }
     {
         // Build a string containing every printable ASCII character.
         std::string all;
         for (int c = 32; c <= 126; ++c) all += static_cast<char>(c);
         test("figlet() handles all printable ASCII",
-             count_newlines(figlet(all)) == HEIGHT);
+             count_newlines(figlet(all)) == FIGLET_HEIGHT);
+    }
+    {
+        // figlet_char should return consistent row count.
+        auto rows = figlet_char('A');
+        test("figlet_char() returns 5 rows",
+             (int)rows.size() == FIGLET_HEIGHT);
     }
 
     // -----------------------------------------------------------------------
@@ -123,14 +128,14 @@ int main()
         ofigstream s(ss);
         s << "A\n";
         test("single char produces 5 rows",
-             count_newlines(ss.str()) == HEIGHT);
+             count_newlines(ss.str()) == FIGLET_HEIGHT);
     }
     {
         std::ostringstream ss;
         ofigstream s(ss);
         s << "Hello\n";
         test("multi-char string produces 5 rows",
-             count_newlines(ss.str()) == HEIGHT);
+             count_newlines(ss.str()) == FIGLET_HEIGHT);
     }
     {
         std::ostringstream ss;
@@ -138,7 +143,7 @@ int main()
         s << "A\n";
         s << "B\n";
         test("two figlet lines produce 10 rows",
-             count_newlines(ss.str()) == 2 * HEIGHT);
+             count_newlines(ss.str()) == 2 * FIGLET_HEIGHT);
     }
     {
         std::ostringstream ss;
@@ -157,8 +162,8 @@ int main()
         s << "X" << nofig << "MARKER" << "X\n";
         auto rows = split_lines(ss.str());
         test("default alignment is bottom",
-             (int)rows.size() == HEIGHT &&
-             rows[HEIGHT - 1].find("MARKER") != std::string::npos &&
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT - 1].find("MARKER") != std::string::npos &&
              rows[0].find("MARKER") == std::string::npos);
     }
     {
@@ -167,9 +172,9 @@ int main()
         s << top << "X" << nofig << "MARKER" << "X\n";
         auto rows = split_lines(ss.str());
         test("top puts plain text on row 0",
-             (int)rows.size() == HEIGHT &&
+             (int)rows.size() == FIGLET_HEIGHT &&
              rows[0].find("MARKER") != std::string::npos &&
-             rows[HEIGHT - 1].find("MARKER") == std::string::npos);
+             rows[FIGLET_HEIGHT - 1].find("MARKER") == std::string::npos);
     }
     {
         std::ostringstream ss;
@@ -177,8 +182,8 @@ int main()
         s << middle << "X" << nofig << "MARKER" << "X\n";
         auto rows = split_lines(ss.str());
         test("middle puts plain text on row 2",
-             (int)rows.size() == HEIGHT &&
-             rows[HEIGHT / 2].find("MARKER") != std::string::npos &&
+             (int)rows.size() == FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT / 2].find("MARKER") != std::string::npos &&
              rows[0].find("MARKER") == std::string::npos);
     }
 
@@ -193,9 +198,9 @@ int main()
         s << "X" << nofig << "SECOND" << "X\n";
         auto rows = split_lines(ss.str());
         test("top alignment persists across two lines",
-             (int)rows.size() == 2 * HEIGHT &&
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
              rows[0].find("FIRST") != std::string::npos &&
-             rows[HEIGHT].find("SECOND") != std::string::npos);
+             rows[FIGLET_HEIGHT].find("SECOND") != std::string::npos);
     }
     {
         std::ostringstream ss;
@@ -205,9 +210,9 @@ int main()
         s << "X" << nofig << "SECOND" << "X\n";
         auto rows = split_lines(ss.str());
         test("middle alignment persists across two lines",
-             (int)rows.size() == 2 * HEIGHT &&
-             rows[HEIGHT / 2].find("FIRST") != std::string::npos &&
-             rows[HEIGHT + HEIGHT / 2].find("SECOND") != std::string::npos);
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
+             rows[FIGLET_HEIGHT / 2].find("FIRST") != std::string::npos &&
+             rows[FIGLET_HEIGHT + FIGLET_HEIGHT / 2].find("SECOND") != std::string::npos);
     }
 
     // -----------------------------------------------------------------------
@@ -222,7 +227,7 @@ int main()
         s << bottom << nofig << "skip" << "A\n";
         auto rows = split_lines(ss.str());
         test("one-shot: field after nofig reverts to figlet",
-             (int)rows.size() == HEIGHT &&
+             (int)rows.size() == FIGLET_HEIGHT &&
              rows[0].find('#') != std::string::npos);
     }
     {
@@ -232,8 +237,68 @@ int main()
         s << bottom << nofig << "skip" << nofig << "A\n";
         auto rows = split_lines(ss.str());
         test("two nofigs make two consecutive plain fields",
-             (int)rows.size() == HEIGHT &&
+             (int)rows.size() == FIGLET_HEIGHT &&
              rows[0].find('#') == std::string::npos);
+    }
+
+    // -----------------------------------------------------------------------
+    section("[ color manipulators ]");
+
+    {
+        // A solid color should embed ANSI escape codes in the output.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::red << "A\n";
+        test("solid color embeds ANSI codes",
+             ss.str().find("\033[") != std::string::npos);
+    }
+    {
+        // Without any color manipulator the output should be plain text.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << "A\n";
+        test("no color manipulator means no ANSI codes",
+             ss.str().find("\033[") == std::string::npos);
+    }
+    {
+        // nocolor after a color should produce clean output on subsequent lines.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::red << "A\n";
+        s << fig::nocolor << "B\n";
+        auto rows = split_lines(ss.str());
+
+        // The second band (rows FIGLET_HEIGHT..2*FIGLET_HEIGHT-1) should be clean.
+        bool second_clean = true;
+        for (int r = FIGLET_HEIGHT; r < 2 * FIGLET_HEIGHT; ++r)
+            if (rows[r].find("\033[") != std::string::npos)
+                second_clean = false;
+
+        test("nocolor clears ANSI codes for subsequent output", second_clean);
+    }
+    {
+        // Color persists: both lines should contain escape codes.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::blue;
+        s << "A\n";
+        s << "B\n";
+        auto rows = split_lines(ss.str());
+        test("color persists across lines",
+             (int)rows.size() == 2 * FIGLET_HEIGHT &&
+             rows[0].find("\033[") != std::string::npos &&
+             rows[FIGLET_HEIGHT].find("\033[") != std::string::npos);
+    }
+    {
+        // Rainbow should produce at least two distinct color codes.
+        std::ostringstream ss;
+        ofigstream s(ss);
+        s << fig::rainbow << "ABC\n";
+        std::string out = ss.str();
+        bool has_bright_red    = out.find("\033[91m") != std::string::npos;
+        bool has_bright_yellow = out.find("\033[93m") != std::string::npos;
+        test("rainbow cycles through multiple palette colors",
+             has_bright_red && has_bright_yellow);
     }
 
     // -----------------------------------------------------------------------

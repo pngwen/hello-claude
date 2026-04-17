@@ -9,11 +9,9 @@
 #include "figlet.h"
 #include <sstream>
 
-static constexpr int HEIGHT = 5;
-
 // Glyph table indexed by (ch - 32) for printable ASCII 32–126.
 // Every row string within a glyph has the same length; glyphs may differ in width.
-static const char* const FONT[95][HEIGHT] = {
+static const char* const FONT[95][FIGLET_HEIGHT] = {
     /* 32 SP */ {"   ","   ","   ","   ","   "},
     /* 33  ! */ {"#","#","#"," ","#"},
     /* 34  " */ {"# #","# #","   ","   ","   "},
@@ -111,19 +109,31 @@ static const char* const FONT[95][HEIGHT] = {
     /* 126 ~ */ {"     "," ##  ","#  ##","     ","     "},
 };
 
-/// @brief Render @p text as a five-row block-character banner.
+/// @brief Return the FIGLET_HEIGHT glyph rows for a single character.
+std::array<std::string, FIGLET_HEIGHT> figlet_char(char c)
+{
+    std::array<std::string, FIGLET_HEIGHT> rows;
+
+    // Look up the glyph for printable ASCII; fall back to spaces otherwise.
+    unsigned char ch = static_cast<unsigned char>(c);
+    for (int r = 0; r < FIGLET_HEIGHT; ++r)
+        rows[r] = (ch >= 32 && ch <= 126) ? FONT[ch - 32][r] : "   ";
+
+    return rows;
+}
+
+/// @brief Render @p text as a FIGLET_HEIGHT-row block-character banner.
 std::string figlet(const std::string& text)
 {
     std::ostringstream oss;
 
     // Emit one horizontal slice of the full banner per row.
-    for (int row = 0; row < HEIGHT; ++row) {
+    for (int row = 0; row < FIGLET_HEIGHT; ++row) {
 
         // Append each character's glyph row, separated by a single space.
         for (size_t i = 0; i < text.size(); ++i) {
             if (i > 0) oss << ' ';
-            unsigned char ch = static_cast<unsigned char>(text[i]);
-            oss << (ch >= 32 && ch <= 126 ? FONT[ch - 32][row] : "   ");
+            oss << figlet_char(text[i])[row];
         }
 
         oss << '\n';

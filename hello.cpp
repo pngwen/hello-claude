@@ -1,10 +1,9 @@
 /**
  * @file hello.cpp
- * @brief Hello, World! rendered through ofigstream.
+ * @brief Hello, World! rendered through ofigstream with color.
  *
- * Demonstrates basic ofigstream usage and the nofig manipulator: "Hello"
- * and "World!" appear as 5-row block-character banners while the
- * intervening ", " is rendered as plain text at the default bottom alignment.
+ * Demonstrates ofigstream's rainbow and solid-color manipulators alongside
+ * the nofig manipulator.
  *
  * @author Robert Lowe
  * @author Claude (Anthropic)
@@ -17,6 +16,13 @@
 int main()
 {
     ofigstream out(std::cout);
-    out << "Hello" << nofig << ", " << "World!\n";
+
+    // Rainbow banner — each character cycles through the bright palette.
+    out << fig::rainbow << "Hello, World!\n";
+
+    // Solid color with a plain-text label at middle alignment.
+    out << fig::nocolor;
+    out << middle << fig::cyan << "C++" << nofig << " in " << fig::bright_yellow << "color!\n";
+
     return 0;
 }
